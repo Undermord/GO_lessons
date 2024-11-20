@@ -2,10 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
 func main() {
+
+	initDB()
+	
 	// Обработчик для корня
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Приветствую")
@@ -28,9 +32,22 @@ func main() {
 		name := r.FormValue("name")
 		email := r.FormValue("email")
 
+		if name == "" || email == "" {
+			http.Error(w, "Имя и email не могут быть пустыми", http.StatusBadRequest)
+			return
+			}
+
+		err := saveUser(name, email)
+		if err != nil {
+			http.Error(w, "Ошибка сохранения данных", http.StatusInternalServerError)
+			return
+		}	
+
 		fmt.Fprintf(w, "Имя: %s\nEmail: %s", name, email)
 	})
 
 	fmt.Println("Сервер запущен на порте 8080")
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal(err)
+	}
 }
