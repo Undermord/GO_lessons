@@ -4,27 +4,42 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 
-	initDB()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Ошибка при загрузке .env файла")
+	}
+
+	err = initDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	
-	// Обработчик для корня
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	
+
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Приветствую")
 	})
-	// Обработчик для другой страницы
-	http.HandleFunc("/about", func(w http.ResponseWriter, r *http.Request) {
+	
+	r.HandleFunc("/about", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Это простой пет-проект на Go")
 
 	})
 
-	// Для статистических файлов
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// Для формы
-	http.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
+
+
+	r.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 			return
@@ -35,7 +50,7 @@ func main() {
 		if name == "" || email == "" {
 			http.Error(w, "Имя и email не могут быть пустыми", http.StatusBadRequest)
 			return
-			}
+		}
 
 		err := saveUser(name, email)
 		if err != nil {
@@ -47,7 +62,7 @@ func main() {
 	})
 
 	fmt.Println("Сервер запущен на порте 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
 	}
 }
